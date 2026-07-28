@@ -34,6 +34,7 @@ import type {
   NetworkConfig,
   NetworkConfigSlice,
   SnapshotSlice,
+  WatchlistItem,
   WatchlistSlice,
 } from './types'
 
@@ -363,6 +364,22 @@ const createContractLoadSlice = (
  * Watchlist slice creator
  * Manages pinned keys for quick access across routes
  */
+const deduplicateWatchlistItems = (
+  items: Array<WatchlistItem> | undefined,
+): Array<WatchlistItem> => {
+  const seen = new Set<string>()
+  return (items ?? []).filter((item) => {
+    if (typeof item.keyPath !== 'string' || item.keyPath.length === 0) {
+      return false
+    }
+    if (seen.has(item.keyPath)) {
+      return false
+    }
+    seen.add(item.keyPath)
+    return true
+  })
+}
+
 const createWatchlistSlice = (
   set: (fn: (state: LensStore) => Partial<LensStore>) => void,
   get: () => LensStore,
@@ -378,7 +395,9 @@ const createWatchlistSlice = (
         return state
       }
 
-      const currentItems = state.watchlist[normalizedContractId] ?? []
+      const currentItems = deduplicateWatchlistItems(
+        state.watchlist[normalizedContractId],
+      )
 
       // Check if item already exists (duplicate protection)
       const isDuplicate = currentItems.some(
@@ -407,14 +426,16 @@ const createWatchlistSlice = (
     set((state) => ({
       watchlist: {
         ...state.watchlist,
-        [contractId]: (state.watchlist[contractId] ?? []).filter(
-          (item) => item.keyPath !== keyPath,
+        [contractId]: deduplicateWatchlistItems(
+          (state.watchlist[contractId] ?? []).filter(
+            (item) => item.keyPath !== keyPath,
+          ),
         ),
       },
     })),
 
   getWatchlistForContract: (contractId: string) => {
-    return get().watchlist[contractId] ?? []
+    return deduplicateWatchlistItems(get().watchlist[contractId])
   },
 
   clearWatchlist: (contractId: string) =>
