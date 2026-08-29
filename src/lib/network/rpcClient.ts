@@ -44,12 +44,17 @@ export async function callRpc<T = unknown>(
   }
 
   try {
+    const headers: Record<string, string> = {}
+    for (const [key, value] of Object.entries(config.headers ?? {})) {
+      if (key.toLowerCase() !== 'content-type') {
+        headers[key] = value
+      }
+    }
+    headers['Content-Type'] = 'application/json'
+
     const response = await fetch(normalized, {
       method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        ...config.headers,
-      },
+      headers,
       body: body ? JSON.stringify(body) : undefined,
       signal: controller.signal,
     })
