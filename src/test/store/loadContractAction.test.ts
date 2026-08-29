@@ -160,7 +160,7 @@ describe('loadContract action', () => {
     expect(state.ledgerData['C_STALE::Other::old-key']).toBeUndefined()
   })
 
-  it('ignores stale results that finish decoding after a newer request', async () => {
+  it('ignores a cancelled request after fetch completes but before decode resolves', async () => {
     const { resetStore, getStoreState, useLensStore } = await import(
       '../../store/lensStore',
     )
@@ -194,12 +194,12 @@ describe('loadContract action', () => {
         latestLedger: 2,
       })
 
-    const firstCall = useLensStore.getState().loadContract('C_DECODE_STALE', ['old'])
+    const firstCall = useLensStore.getState().loadContract('C_DECODE_CANCEL', ['old'])
     for (let attempt = 0; attempt < 10 && !firstWorker.decodeScVal.mock.calls.length; attempt += 1) {
       await Promise.resolve()
     }
 
-    const secondCall = useLensStore.getState().loadContract('C_DECODE_STALE', ['new'])
+    const secondCall = useLensStore.getState().loadContract('C_DECODE_CANCEL', ['new'])
     await secondCall
     resolveFirstDecode?.({
       kind: 'primitive',
@@ -212,7 +212,7 @@ describe('loadContract action', () => {
 
     const state = getStoreState()
     expect(state.contractLoadStatus).toBe(ContractLoadStatus.SUCCESS)
-    expect(state.ledgerData['C_DECODE_STALE::Other::new-key'].rawXdr).toBe('new-xdr')
-    expect(state.ledgerData['C_DECODE_STALE::Other::old-key']).toBeUndefined()
+    expect(state.ledgerData['C_DECODE_CANCEL::Other::new-key'].rawXdr).toBe('new-xdr')
+    expect(state.ledgerData['C_DECODE_CANCEL::Other::old-key']).toBeUndefined()
   })
 })

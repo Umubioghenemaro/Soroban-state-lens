@@ -324,10 +324,23 @@ const createContractLoadSlice = (
         }
 
         const worker = await createDecoderWorkerSafe()
+        if (isRequestStale()) {
+          return
+        }
+
         const decodedValuesByKey: Record<string, unknown> = {}
 
         for (const entry of entries) {
+          if (isRequestStale()) {
+            return
+          }
+
           const result = await worker.decodeScVal({ xdr: entry.xdr })
+
+          if (isRequestStale()) {
+            return
+          }
+
           decodedValuesByKey[entry.key] = isDecoderWorkerError(result)
             ? entry.xdr
             : result
