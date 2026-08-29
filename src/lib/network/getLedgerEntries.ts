@@ -129,14 +129,14 @@ export async function getLedgerEntries(
       throw new AbortError()
     }
 
-    if (isJsonRpcErrorResponse(data)) {
+    if (isJsonRpcErrorResponse(data, requestId)) {
       return {
         message: `RPC Error (${data.error.code}): ${data.error.message}`,
         code: data.error.code,
       }
     }
 
-    if (!isJsonRpcSuccessResponse(data)) {
+    if (!isJsonRpcSuccessResponse(data, requestId)) {
       return { message: 'Invalid JSON-RPC response format', code: 'INVALID' }
     }
 

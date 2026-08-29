@@ -150,14 +150,14 @@ export async function simulateTransaction(
     }
   }
 
-  if (isJsonRpcErrorResponse(data)) {
+  if (isJsonRpcErrorResponse(data, requestId)) {
     return {
       success: false,
       error: `RPC Error (${data.error.code}): ${data.error.message}`,
     }
   }
 
-  if (!isJsonRpcSuccessResponse(data)) {
+  if (!isJsonRpcSuccessResponse(data, requestId)) {
     return { success: false, error: 'Invalid JSON-RPC response format' }
   }
 
