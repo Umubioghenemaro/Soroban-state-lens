@@ -261,4 +261,19 @@ describe('NetworkSelector Component', () => {
     })
     expect(screen.queryByText('A failed')).toBeNull()
   })
+
+  it('returns focus to the trigger after selecting a preset network', async () => {
+    render(<NetworkSelector />)
+
+    const trigger = screen.getByRole('button', { name: /select network/i })
+    await waitFor(() =>
+      expect(trigger.getAttribute('aria-expanded')).toBe('false'),
+    )
+
+    fireEvent.click(trigger)
+    fireEvent.click(screen.getByRole('option', { name: /mainnet/i }))
+
+    expect(document.activeElement).toBe(trigger)
+    expect(trigger.getAttribute('aria-expanded')).toBe('false')
+  })
 })
