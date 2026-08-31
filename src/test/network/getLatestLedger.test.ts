@@ -128,6 +128,72 @@ describe('getLatestLedgerConnectionCheck', () => {
     })
   })
 
+  it.each([
+    { protocolVersion: -1 },
+    { protocolVersion: -23 },
+    { protocolVersion: 1.5 },
+    { protocolVersion: 22.9 },
+    { protocolVersion: Number.NaN },
+    { protocolVersion: Number.POSITIVE_INFINITY },
+    { protocolVersion: Number.NEGATIVE_INFINITY },
+  ])(
+    'rejects invalid protocolVersion $protocolVersion',
+    async ({ protocolVersion }) => {
+      vi.spyOn(rpcClient, 'callRpc').mockResolvedValue({
+        jsonrpc: '2.0',
+        id: 1,
+        result: {
+          sequence: 100,
+          protocolVersion,
+        },
+      } as any)
+
+      const result = await getLatestLedgerConnectionCheck(
+        'https://weird-rpc.com',
+      )
+
+      expect(result).toEqual({
+        success: false,
+        error: 'Invalid response from RPC server',
+      })
+    },
+  )
+
+  it('accepts protocolVersion of zero', async () => {
+    vi.spyOn(rpcClient, 'callRpc').mockImplementation(async (_config, body) => ({
+      jsonrpc: '2.0',
+      id: (body as { id?: number }).id ?? 1,
+      result: {
+        sequence: 100,
+        protocolVersion: 0,
+      },
+    }))
+
+    const result = await getLatestLedgerConnectionCheck('https://valid-rpc.com')
+
+    expect(result).toEqual({
+      success: true,
+      ledger: { sequence: 100, protocolVersion: 0 },
+    })
+  })
+
+  it('omits protocolVersion when the field is absent', async () => {
+    vi.spyOn(rpcClient, 'callRpc').mockImplementation(async (_config, body) => ({
+      jsonrpc: '2.0',
+      id: (body as { id?: number }).id ?? 1,
+      result: {
+        sequence: 100,
+      },
+    }))
+
+    const result = await getLatestLedgerConnectionCheck('https://valid-rpc.com')
+
+    expect(result).toEqual({
+      success: true,
+      ledger: { sequence: 100 },
+    })
+  })
+
   it('handles unexpected thrown errors', async () => {
     vi.spyOn(rpcClient, 'callRpc').mockRejectedValue(new Error('Fatal error'))
 
