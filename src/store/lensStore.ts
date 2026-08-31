@@ -201,6 +201,8 @@ const createExpandedNodesSlice = (
     })),
 })
 
+export const DEFAULT_SNAPSHOT_RETENTION_LIMIT = 25
+
 /**
  * Snapshot slice creator
  */
@@ -214,6 +216,7 @@ const createSnapshotSlice = (
     contractId: string,
     entries: Record<string, LedgerEntry>,
     label?: string,
+    maxSnapshots: number = DEFAULT_SNAPSHOT_RETENTION_LIMIT,
   ) =>
     set((state) => {
       // Deep clone entries to ensure immutability
@@ -227,20 +230,23 @@ const createSnapshotSlice = (
 
       const normalizedLabel =
         typeof label === 'string' ? label.trim() || undefined : label
+      const existing = state.snapshots[contractId] ?? []
+      const timestamp = Date.now()
+      const nextSnapshot = {
+        id: `${timestamp}-${crypto.randomUUID()}`,
+        contractId,
+        timestamp,
+        ledgerData: clonedEntries,
+        label: normalizedLabel,
+      }
+
+      const trimmedSnapshots =
+        maxSnapshots > 0 ? [...existing, nextSnapshot].slice(-maxSnapshots) : []
 
       return {
         snapshots: {
           ...state.snapshots,
-          [contractId]: [
-            ...(state.snapshots[contractId] ?? []),
-            {
-              id: crypto.randomUUID(),
-              contractId,
-              timestamp: Date.now(),
-              ledgerData: clonedEntries,
-              label: normalizedLabel,
-            },
-          ],
+          [contractId]: trimmedSnapshots,
         },
       }
     }),
@@ -636,7 +642,11 @@ export const lensActions = {
     contractId: string,
     entries: Record<string, LedgerEntry>,
     label?: string,
-  ) => useLensStore.getState().addSnapshot(contractId, entries, label),
+    maxSnapshots?: number,
+  ) =>
+    useLensStore
+      .getState()
+      .addSnapshot(contractId, entries, label, maxSnapshots),
   getSnapshots: (contractId: string) =>
     useLensStore.getState().getSnapshots(contractId),
   removeSnapshot: (contractId: string, snapshotId: string) =>
